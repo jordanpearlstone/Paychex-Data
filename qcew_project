@@ -1,0 +1,17 @@
+SELECT
+  q.area_fips,
+  a.area_title,
+  q.year,
+  q.qtr,
+  q.avg_quarterly_employment,
+  q.qtrly_estabs,
+  q.avg_wkly_wage,
+  q.employment_index,
+  q.employer_index,
+  q.wage_index
+FROM `project-b7841bf5-9e40-4961-8f0.qcew_project.qcew_paychex_proxy_index` q
+LEFT JOIN `project-b7841bf5-9e40-4961-8f0.qcew_project.qcew_area_lookup` a
+  ON q.area_fips = a.area_fips
+WHERE q.area_fips LIKE '53%'
+  AND q.avg_quarterly_employment > 10000
+ORDER BY q.avg_quarterly_employment DESC;
