@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>QCEW Employment Growth Map</title>
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    header {
+      padding: 16px 24px;
+      background: #f5f5f5;
+      border-bottom: 1px solid #ddd;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    p {
+      margin: 6px 0 0;
+      color: #555;
+    }
+
+    #map {
+      height: 85vh;
+      width: 100%;
+    }
+
+    .legend {
+      background: white;
+      padding: 10px;
+      line-height: 18px;
+      color: #333;
+      border-radius: 4px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.2);
+      font-size: 13px;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>QCEW Employment Growth Map</h1>
+    <p>Darker areas show higher 2025 vs. 2024 employment growth. Minimum: 10,000 employees in 2025.</p>
+  </header>
+
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+
+  <script>
+    const map = L.map("map").setView([39.8, -98.6], 4);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18,
+      attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(map);
+
+    const csvFile = "qcew_map_growth_results.csv";
+    const countyGeoJsonUrl = "https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json";
+
+    function getColor(value) {
+      return value > 30 ? "#08306b" :
+             value > 25 ? "#08519c" :
+             value > 20 ? "#2171b5" :
+             value > 15 ? "#4292c6" :
+             value > 10 ? "#6baed6" :
+                          "#deebf7";
+    }
+
+    Promise.all([
+      d3.csv(csvFile),
+      d3.json(countyGeoJsonUrl)
+    ]).then(([growthData, countyGeoJson]) => {
+
+      const growthByFips = {};
+
+      growthData.forEach(row => {
+        const fips = row.area_fips.padStart(5, "0");
+        growthByFips[fips] = {
+          area_title: row.area_title,
+          employment_2024: Number(row.employment_2024),
+          employment_2025: Number(row.employment_2025),
+          growth_pct: Number(row.yoy_employment_growth_pct)
+        };
+      });
+
+      function style(feature) {
+        const fips = feature.id;
+        const data = growthByFips[fips];
+
+        return {
+          fillColor: data ? getColor(data.growth_pct) : "#eeeeee",
+          weight: data ? 1.5 : 0.3,
+          opacity: 1,
+          color: data ? "#333" : "#ccc",
+          fillOpacity: data ? 0.8 : 0.15
+        };
+      }
+
+      function onEachFeature(feature, layer) {
+        const fips = feature.id;
+        const data = growthByFips[fips];
+
+        if (data) {
+          layer.bindPopup(`
+            <strong>${data.area_title}</strong><br>
+            FIPS: ${fips}<br>
+            2024 Employment: ${data.employment_2024.toLocaleString()}<br>
+            2025 Employment: ${data.employment_2025.toLocaleString()}<br>
+            YoY Growth: ${data.growth_pct.toFixed(2)}%
+          `);
+        }
+      }
+
+      L.geoJson(countyGeoJson, {
+        style: style,
+        onEachFeature: onEachFeature
+      }).addTo(map);
+
+      const legend = L.control({ position: "bottomright" });
+
+      legend.onAdd = function () {
+        const div = L.DomUtil.create("div", "legend");
+        div.innerHTML = `
+          <strong>YoY Employment Growth</strong><br>
+          <span style="background:#08306b;display:inline-block;width:14px;height:14px;"></span> 30%+<br>
+          <span style="background:#08519c;display:inline-block;width:14px;height:14px;"></span> 25%–30%<br>
+          <span style="background:#2171b5;display:inline-block;width:14px;height:14px;"></span> 20%–25%<br>
+          <span style="background:#4292c6;display:inline-block;width:14px;height:14px;"></span> 15%–20%<br>
+          <span style="background:#6baed6;display:inline-block;width:14px;height:14px;"></span> 10%–15%<br>
+        `;
+        return div;
+      };
+
+      legend.addTo(map);
+    });
+  </script>
+</body>
+</html>
