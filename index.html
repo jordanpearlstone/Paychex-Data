@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>QCEW Employment Growth Map</title>
 
   <link
@@ -59,9 +60,19 @@
   <script src="https://d3js.org/d3.v7.min.js"></script>
 
   <script>
-    const map = L.map("map").setView([39.8, -98.6], 4);
+    const usBounds = [
+      [18.0, -179.0],
+      [72.0, -60.0]
+    ];
+
+    const map = L.map("map", {
+      maxBounds: usBounds,
+      maxBoundsViscosity: 1.0,
+      minZoom: 3
+    }).setView([39.8, -98.6], 4);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      minZoom: 3,
       maxZoom: 18,
       attribution: "&copy; OpenStreetMap contributors"
     }).addTo(map);
@@ -87,6 +98,7 @@
 
       growthData.forEach(row => {
         const fips = row.area_fips.padStart(5, "0");
+
         growthByFips[fips] = {
           area_title: row.area_title,
           employment_2024: Number(row.employment_2024),
@@ -132,14 +144,17 @@
 
       legend.onAdd = function () {
         const div = L.DomUtil.create("div", "legend");
+
         div.innerHTML = `
           <strong>YoY Employment Growth</strong><br>
           <span style="background:#08306b;display:inline-block;width:14px;height:14px;"></span> 30%+<br>
-          <span style="background:#08519c;display:inline-block;width:14px;height:14px;"></span> 25%–30%<br>
-          <span style="background:#2171b5;display:inline-block;width:14px;height:14px;"></span> 20%–25%<br>
-          <span style="background:#4292c6;display:inline-block;width:14px;height:14px;"></span> 15%–20%<br>
-          <span style="background:#6baed6;display:inline-block;width:14px;height:14px;"></span> 10%–15%<br>
+          <span style="background:#08519c;display:inline-block;width:14px;height:14px;"></span> 25%&ndash;30%<br>
+          <span style="background:#2171b5;display:inline-block;width:14px;height:14px;"></span> 20%&ndash;25%<br>
+          <span style="background:#4292c6;display:inline-block;width:14px;height:14px;"></span> 15%&ndash;20%<br>
+          <span style="background:#6baed6;display:inline-block;width:14px;height:14px;"></span> 10%&ndash;15%<br>
+          <span style="background:#eeeeee;display:inline-block;width:14px;height:14px;"></span> Does not meet filter
         `;
+
         return div;
       };
 
